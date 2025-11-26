@@ -6,21 +6,29 @@ namespace face_detection_plugin {
 using namespace nx::sdk;
 using namespace nx::sdk::analytics;
 
-// THÊM: Gọi constructor lớp cha. 
-// enableOutput = false vì Engine này không trực tiếp đẩy metadata (DeviceAgent làm việc đó)
-Engine::Engine(): nx::sdk::analytics::Engine(/*enableOutput*/ false)
+Engine::Engine(Plugin* plugin):
+    // enableOutput=true để hiện log debug
+    nx::sdk::analytics::Engine(true, plugin->instanceId()),
+    m_plugin(plugin)
 {
 }
 
-std::string Engine::manifestString() const
+Engine::~Engine()
 {
-    return "{}";
 }
 
 void Engine::doObtainDeviceAgent(Result<IDeviceAgent*>* outResult, const IDeviceInfo* deviceInfo)
 {
-    // Tạo mới DeviceAgent cho Camera được yêu cầu
     *outResult = new DeviceAgent(deviceInfo);
+}
+
+std::string Engine::manifestString() const
+{
+    // QUAN TRỌNG: Yêu cầu server giải mã sang YUV420
+    return R"json({
+        "capabilities": "needUncompressedVideoFrames_yuv420",
+        "streamTypeFilter": "uncompressedVideo"
+    })json";
 }
 
 } // namespace face_detection_plugin

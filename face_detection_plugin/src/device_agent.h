@@ -17,10 +17,9 @@ public:
 protected:
     virtual std::string manifestString() const override;
 
-    // SỬA: Dùng đúng namespace nx::sdk::analytics::ICompressedVideoPacket
-    virtual bool pushCompressedVideoFrame(const nx::sdk::analytics::ICompressedVideoPacket* videoPacket) override;
+    // SỬA: Dùng hàm này để nhận video đã giải mã (YUV)
+    virtual bool pushUncompressedVideoFrame(const nx::sdk::analytics::IUncompressedVideoFrame* videoFrame) override;
 
-    // THÊM: Hàm này bắt buộc phải override từ SDK (dù để trống)
     virtual void doSetNeededMetadataTypes(
         nx::sdk::Result<void>* outValue,
         const nx::sdk::analytics::IMetadataTypes* neededMetadataTypes) override;
