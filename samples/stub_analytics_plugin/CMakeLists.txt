@@ -34,6 +34,24 @@ if(MSVC)
     add_compile_options("/Z7")
 endif()
 
+if(MSVC)
+    # 1. Enforce Static Runtime (/MT) to avoid server-side dependencies
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    
+    # 2. Add /MT compile options for all configurations
+    add_compile_options($<$<CONFIG:Release>:/MT>)
+    add_compile_options($<$<CONFIG:Debug>:/MTd>)
+    
+    # 3. Replace default CMake /MD flags with /MT (Crucial step)
+    foreach(flag_var
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+      if(${flag_var} MATCHES "/MD")
+        string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+      endif()
+    endforeach()
+endif()
+
 if(WIN32)
     set(API_IMPORT_MACRO "__declspec(dllimport)")
     set(API_EXPORT_MACRO "__declspec(dllexport)")
