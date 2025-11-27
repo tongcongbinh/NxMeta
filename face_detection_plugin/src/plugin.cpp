@@ -1,5 +1,6 @@
 #include "plugin.h"
 #include "engine.h"
+#include <string> // Bổ sung thư viện string
 
 namespace face_detection_plugin {
 
@@ -13,28 +14,30 @@ Result<IEngine*> Plugin::doObtainEngine()
 
 std::string Plugin::manifestString() const
 {
-    // THÊM: typeLibrary vào đây
-    return R"json({
-        "id": "face.detection.plugin",
-        "name": "Face Detection Plugin",
-        "description": "Face Detection using YOLOv8 ONNX",
-        "version": "1.0.0",
-        "vendor": "Custom",
-        "typeLibrary": {
-            "objectTypes": [
-                {
-                    "id": "face.detection.object",
-                    "name": "Face",
-                    "attributes": []
-                }
-            ]
-        }
-    })json";
+    // --- KHẮC PHỤC LỖI PARSING BẰNG CÁCH GHÉP CHUỖI C++ ---
+    // Phương pháp này loại bỏ mọi lỗi do ký tự ẩn trong R"json(...)"
+    std::string manifest = "{";
+    manifest += "\"id\": \"face.detection.plugin\",";
+    manifest += "\"name\": \"Face Detection Plugin\",";
+    manifest += "\"description\": \"Face Detection using YOLOv8 ONNX\",";
+    manifest += "\"version\": \"1.0.0\",";
+    manifest += "\"vendor\": \"Custom\",";
+    manifest += "\"typeLibrary\": {";
+    manifest += "\"objectTypes\": [";
+    manifest += "{";
+    manifest += "\"id\": \"face.detection.object\","; // ID PHẢI KHỚP
+    manifest += "\"name\": \"Face\",";
+    manifest += "\"attributes\": []";
+    manifest += "}";
+    manifest += "]";
+    manifest += "}";
+    manifest += "}";
+    return manifest;
 }
 
 } // namespace face_detection_plugin
 
-// Giữ nguyên đoạn extern "C" ở cuối file
+// Entry point
 extern "C" NX_PLUGIN_API nx::sdk::IPlugin* createNxPlugin()
 {
     return new face_detection_plugin::Plugin();

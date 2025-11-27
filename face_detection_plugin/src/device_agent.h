@@ -2,8 +2,10 @@
 
 #include <nx/sdk/analytics/helpers/consuming_device_agent.h>
 #include <nx/sdk/helpers/string.h>
+#include <nx/sdk/helpers/uuid_helper.h>
 #include <nx/sdk/ptr.h>
 #include <memory>
+#include <vector>
 #include "FaceDetector.h"
 
 namespace face_detection_plugin {
@@ -25,8 +27,11 @@ protected:
         const nx::sdk::analytics::IMetadataTypes* neededMetadataTypes) override;
 
 private:
+    nx::sdk::Uuid trackIdByIndex(int index);
+    
     std::unique_ptr<FaceDetector> m_faceDetector;
     std::string m_modelPath;
+    std::vector<nx::sdk::Uuid> m_trackIds;
 };
 
 } // namespace face_detection_plugin

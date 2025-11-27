@@ -71,5 +71,3 @@ target_link_libraries(face_detection_plugin PRIVATE
 # --- B. QUAN TRỌNG: Thêm dòng này để sửa lỗi C1189 cho Plugin ---
 target_compile_definitions(face_detection_plugin PRIVATE NX_PLUGIN_API=${API_EXPORT_MACRO})
 # ---------------------------------------------------------------
-
-file(COPY "model.onnx" DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)

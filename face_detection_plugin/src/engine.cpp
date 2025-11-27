@@ -7,15 +7,12 @@ using namespace nx::sdk;
 using namespace nx::sdk::analytics;
 
 Engine::Engine(Plugin* plugin):
-    // enableOutput=true để hiện log debug
-    nx::sdk::analytics::Engine(true, plugin->instanceId()),
+    nx::sdk::analytics::Engine(false, plugin->instanceId()), // false để tắt log debug thừa
     m_plugin(plugin)
 {
 }
 
-Engine::~Engine()
-{
-}
+Engine::~Engine() {}
 
 void Engine::doObtainDeviceAgent(Result<IDeviceAgent*>* outResult, const IDeviceInfo* deviceInfo)
 {
@@ -24,7 +21,7 @@ void Engine::doObtainDeviceAgent(Result<IDeviceAgent*>* outResult, const IDevice
 
 std::string Engine::manifestString() const
 {
-    // QUAN TRỌNG: Yêu cầu server giải mã sang YUV420
+    // CHỈ CẤU HÌNH VIDEO STREAM
     return R"json({
         "capabilities": "needUncompressedVideoFrames_yuv420",
         "streamTypeFilter": "uncompressedVideo"
