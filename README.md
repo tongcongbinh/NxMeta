@@ -63,9 +63,7 @@ cmake -S <PluginFolder> -B <BuildFolder> -A x64 -DmetadataSdkDir=<SdkFolder>
 
 If the plugin depends on OpenCV (e.g., this Face Detection module):
 ```
-cmake -S <PluginFolder> -B <BuildFolder> -A x64 ^
-  -DOpenCV_DIR="...\opencv\build" ^
-  -DmetadataSdkDir=<SdkFolder>
+cmake -S <PluginFolder> -B <BuildFolder> -A x64 -DOpenCV_DIR="...\opencv\build" -DmetadataSdkDir=<SdkFolder>
 ```
 
 Build:
