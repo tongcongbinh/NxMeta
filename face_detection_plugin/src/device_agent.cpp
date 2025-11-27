@@ -105,51 +105,75 @@ cv::Mat convertYUVtoBGR(const nx::sdk::analytics::IUncompressedVideoFrame* frame
 
 bool DeviceAgent::pushUncompressedVideoFrame(const nx::sdk::analytics::IUncompressedVideoFrame* videoFrame)
 {
-    // --- FRAME SKIPPING: Giảm tải CPU ---
+    // Cần khai báo static để giữ trạng thái qua các lần gọi hàm.
+    // Lưu trữ kết quả của frame detect gần nhất.
+    // LƯU Ý: Việc dùng static variable trong C++ class method là không được khuyến khích
+    // cho các môi trường multi-threaded/multi-camera, nhưng là giải pháp nhanh nhất 
+    // để giữ trạng thái khi không thay đổi header file.
     static int frameCounter = 0;
-    frameCounter++;
-    if (frameCounter % 5 != 0) return true; // Xử lý 1 frame, bỏ 4 frame
-
-    cv::Mat image = convertYUVtoBGR(videoFrame);
-    if (image.empty()) return true;
-
-    // Detect (ngưỡng 0.4)
-    std::vector<DetectionResult> results = m_faceDetector->detect(image, 0.4f, 0.4f);
-    if (results.empty()) return true;
-
-    // --- GỬI METADATA ---
-    auto metadataPacket = makePtr<ObjectMetadataPacket>();
-    metadataPacket->setTimestampUs(videoFrame->timestampUs());
+    static std::vector<DetectionResult> lastResults; 
     
-    // Duration 200ms (đủ để che lấp khoảng trống 5 frame)
-    metadataPacket->setDurationUs(200000); 
+    // Duration 1 frame time (Giả định 25 FPS -> 40ms)
+    // Đẩy metadata mỗi frame với duration ngắn để VMS Client hiển thị liên tục, tránh nhấp nháy.
+    const int64_t frameDurationUs = 40000; 
 
-    for (size_t i = 0; i < results.size(); ++i) {
-        const auto& det = results[i];
-        auto objectMetadata = makePtr<ObjectMetadata>();
+    frameCounter++;
+
+    // Kiểm tra xem có cần chạy DETECT trên frame này không (1/5 frame)
+    if (frameCounter % 5 == 0) {
+        // Xử lý hình ảnh và chạy detect
+        cv::Mat image = convertYUVtoBGR(videoFrame);
+        if (image.empty()) return true;
+
+        // Detect (ngưỡng 0.4)
+        std::vector<DetectionResult> results = m_faceDetector->detect(image, 0.4f, 0.4f);
         
-        // ID PHẢI KHỚP VỚI FILE plugin.cpp
-        objectMetadata->setTypeId("face.detection.object"); 
-        objectMetadata->setConfidence(det.confidence);
-
-        // Set Track ID để client hiển thị bounding box
-        objectMetadata->setTrackId(trackIdByIndex((int)i));
-
-        float x = (float)det.box.x / image.cols;
-        float y = (float)det.box.y / image.rows;
-        float w = (float)det.box.width / image.cols;
-        float h = (float)det.box.height / image.rows;
-
-        // Valid tọa độ
-        if (x < 0) x = 0; if (y < 0) y = 0;
-        if (x + w > 1.0f) w = 1.0f - x;
-        if (y + h > 1.0f) h = 1.0f - y;
-
-        objectMetadata->setBoundingBox(Rect(x, y, w, h));
-        metadataPacket->addItem(objectMetadata.get());
+        // Cập nhật kết quả gần nhất. Nếu không detect được, lastResults sẽ là vector rỗng.
+        lastResults = std::move(results); 
     }
+    
+    // GỬI METADATA (Dùng kết quả detect gần nhất)
+    // Không dùng return true sớm như code cũ.
+    if (!lastResults.empty()) {
+        auto metadataPacket = makePtr<ObjectMetadataPacket>();
+        metadataPacket->setTimestampUs(videoFrame->timestampUs());
+        
+        // Duration 1 frame time (40ms)
+        metadataPacket->setDurationUs(frameDurationUs); 
 
-    pushMetadataPacket(metadataPacket.releasePtr());
+        // Lấy kích thước frame (an toàn hơn là dùng image.cols/rows vì image chỉ có ở frame detect)
+        int frameWidth = videoFrame->width();
+        int frameHeight = videoFrame->height();
+
+        for (size_t i = 0; i < lastResults.size(); ++i) {
+            const auto& det = lastResults[i];
+            auto objectMetadata = makePtr<ObjectMetadata>();
+            
+            // ID PHẢI KHỚP VỚI FILE plugin.cpp
+            objectMetadata->setTypeId("face.detection.object"); 
+            objectMetadata->setConfidence(det.confidence);
+
+            // Set Track ID để client hiển thị bounding box
+            objectMetadata->setTrackId(trackIdByIndex((int)i));
+
+            // Tính toán tọa độ chuẩn hóa (dùng kích thước frame)
+            float x = (float)det.box.x / frameWidth;
+            float y = (float)det.box.y / frameHeight;
+            float w = (float)det.box.width / frameWidth;
+            float h = (float)det.box.height / frameHeight;
+
+            // Valid tọa độ
+            if (x < 0) x = 0; if (y < 0) y = 0;
+            if (x + w > 1.0f) w = 1.0f - x;
+            if (y + h > 1.0f) h = 1.0f - y;
+
+            objectMetadata->setBoundingBox(Rect(x, y, w, h));
+            metadataPacket->addItem(objectMetadata.get());
+        }
+
+        pushMetadataPacket(metadataPacket.releasePtr());
+    } 
+
     return true;
 }
 
